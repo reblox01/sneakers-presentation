@@ -1,0 +1,118 @@
+@startuml Component Diagram
+skinparam componentFontSize 11
+skinparam packageFontSize 12
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
+
+title Sneakers E-Commerce — Component Diagram (Verified Codebase)
+
+node "Navigateur Web" as browser {
+  component "HTML / CSS" as html
+  component "JavaScript\n(IIFE, vanilla)" as js
+}
+
+package "Sneakers Module\n(sneakers/)" as sneakers {
+  package "Controllers" as ctrl {
+    component "SneakersWebsiteSale\n(line 33)" as ctrl_sale
+    component "SneakersController\n(line 416)" as ctrl_misc
+  }
+
+  package "Models" as models {
+    component "product.brand" as m_brand
+    component "newsletter.subscriber" as m_news_sub
+    component "newsletter.campaign" as m_news_camp
+    component "social.post" as m_social
+    component "sendcloud.shipping.method" as m_sc_method
+    component "product.template\n(_inherit)" as m_pt
+    component "delivery.carrier\n(_inherit)" as m_dc
+  }
+
+  package "Views / Templates\n(QWeb XML)" as views {
+    component "layout.xml" as v_layout
+    component "header.xml" as v_header
+    component "footer.xml" as v_footer
+    component "Pages:\nhome, shop, product,\ncart, checkout,\npayment, confirmation,\nwishlist, contact..." as v_pages
+  }
+
+  package "Static Assets" as assets {
+    component "11 JS Files\n(header, checkout,\nwishlist, product,\nnewsletter, social,\ncookie, sidebar, etc.)" as js_files
+    component "18 CSS Files\n(variables, layout,\nheader, footer, responsive,\nhome, shop, product,\ncart, checkout, etc.)" as css_files
+  }
+
+  package "Security" as sec {
+    component "ir.model.access.csv\n(6 ACL rules)" as acl
+  }
+
+  package "Data" as data {
+    component "brands, categories,\ndemo products,\nratings" as seed_data
+  }
+}
+
+package "Odoo Standard Modules" as odoo_std {
+  component "website" as odoo_website
+  component "website_sale" as odoo_ws
+  component "website_sale_wishlist" as odoo_wish
+  component "sale_loyalty" as odoo_loyalty
+  component "website_sale_loyalty" as odoo_ws_loyalty
+  component "stock" as odoo_stock
+  component "delivery" as odoo_delivery
+}
+
+package "Infrastructure" as infra {
+  component "Odoo ORM" as orm
+  database "PostgreSQL" as pg
+  component "SendCloud API\n(auth only)" as sendcloud
+}
+
+' --- Browser to Odoo ---
+html -down-> v_layout : HTTP
+js -down-> ctrl_sale : AJAX / fetch
+js -down-> ctrl_misc : AJAX / fetch
+
+' --- Controllers use Models ---
+ctrl_sale -down-> m_pt
+ctrl_sale -down-> m_brand
+ctrl_misc -down-> m_news_sub
+ctrl_misc -down-> m_social
+ctrl_misc -down-> m_dc
+
+' --- Models extend Odoo standard ---
+m_pt -up-> odoo_ws : _inherit
+m_dc -up-> odoo_delivery : _inherit
+
+' --- Models use Odoo models ---
+m_pt -right-> odoo_stock
+m_dc -right-> odoo_delivery
+odoo_wish -right-> odoo_ws
+
+' --- Sneakers depends on Odoo std ---
+sneakers -down-> odoo_std : depends
+
+' --- Views reference Controllers ---
+v_pages -up-> ctrl_sale
+v_pages -up-> ctrl_misc
+v_layout -up-> v_header
+v_layout -up-> v_footer
+
+' --- Assets loaded by Views ---
+js_files -up-> v_pages
+css_files -up-> v_pages
+
+' --- ORM + DB ---
+m_pt -down-> orm
+m_brand -down-> orm
+m_news_sub -down-> orm
+m_news_camp -down-> orm
+m_social -down-> orm
+m_sc_method -down-> orm
+m_dc -down-> orm
+orm -down-> pg
+
+' --- SendCloud ---
+m_dc -right-> sendcloud : auth (Basic)
+
+' --- ACL ---
+sec -up-> models
+
+@enduml

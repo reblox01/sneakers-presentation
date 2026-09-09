@@ -1,0 +1,112 @@
+@startuml Class Diagram
+skinparam classFontSize 11
+skinparam classAttributeFontSize 10
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 40
+
+title Sneakers E-Commerce — Class Diagram (Verified Codebase)
+
+package "Odoo Standard (Extended)" {
+  class product.template <<model>> {
+    + brand_id : M2O → product.brand
+    + website_availability : selection
+    + allow_out_of_stock_order : boolean
+    + stock_threshold : integer
+    + country_of_origin : M2O → res.country
+  }
+
+  class delivery.carrier <<model>> {
+    + delivery_type : selection
+    + sendcloud_public_key : char
+    + sendcloud_secret_key : char
+    + sendcloud_is_test_mode : boolean
+    + sendcloud_shipping_method_id : M2O
+    + _sendcloud_auth()
+    + action_test_sendcloud_connection()
+    + action_import_sendcloud_methods()
+  }
+
+  class product.wishlist <<model>> {
+    + partner_id : M2O → res.partner
+    + product_id : M2O → product.template
+    + website_id : M2O → website
+  }
+
+  class website <<model>> {
+    + name : char
+  }
+
+  class res.partner <<model>> {
+    + name : char
+    + email : char
+  }
+
+  class res.country <<model>> {
+    + name : char
+  }
+}
+
+package "Sneakers Module — Models" {
+  class product.brand <<model>> {
+    + name : char (required)
+    + logo : image
+  }
+
+  class newsletter.subscriber <<model>> {
+    + email : char (unique)
+    + state : selection
+      (subscribed / unsubscribed)
+    + _sql_constraints : UNIQUE(email)
+  }
+
+  class newsletter.campaign <<model>> {
+    + name : char
+    + subject : char
+    + body_html : html
+    + state : selection
+      (draft / sent / failed)
+  }
+
+  class social.post <<model>> {
+    + platform : selection
+      (twitter / facebook / linkedin / instagram)
+    + state : selection
+      (draft / published / failed)
+    + image_ids : M2M → ir.attachment
+  }
+
+  class sendcloud.shipping.method <<model>> {
+    + name : char
+    + sendcloud_id : integer (indexed)
+    + carrier : selection
+    + min_weight : float
+    + max_weight : float
+    + price : float
+    + country_prices : text
+  }
+}
+
+package "Supporting Models" {
+  class ir.attachment <<model>> {
+    + name : char
+    + datas : binary
+  }
+}
+
+' --- Relationships ---
+product.template }|--|| product.brand : brand_id
+product.template }|--|| res.country : country_of_origin
+delivery.carrier }|--|| sendcloud.shipping.method : sendcloud_shipping_method_id
+social.post }|--|{ ir.attachment : image_ids
+
+' --- Inheritance (dashed) ---
+product.template <|-- product.template : _inherit
+delivery.carrier <|-- delivery.carrier : _inherit
+
+' --- Cross-module associations ---
+newsletter.subscriber ..> res.partner : partner_id (implied by subscribe route)
+product.wishlist }|--|| product.template : product_id
+product.wishlist }|--|| website : website_id
+
+@enduml
